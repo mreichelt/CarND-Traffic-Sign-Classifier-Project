@@ -41,23 +41,40 @@ print("Number of classes =", n_classes)
 
 ### Data exploration visualization code goes here.
 ### Feel free to use as many code cells as needed.
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import random
+import numpy as np
 
 samples_to_show = 1
 
 indexes = list(range(n_train))
 random.shuffle(indexes)
 indexes = indexes[0:samples_to_show]
-for i in indexes:
-    imgplot = plt.imshow(X_train[i])
+#for i in indexes:
+    #imgplot = plt.imshow(X_train[i])
     # plt.show()
 
 ### Preprocess the data here. Preprocessing steps could include normalization, converting to grayscale, etc.
 ### Feel free to use as many code cells as needed.
-# TODO
 
+def grayscale(X):
+    # we simply add up the colors - they will be normalized away anyway later on
+    return np.sum(X, axis=3, keepdims=True)
 
+def feature_scaled(X, min, max):
+    return (X - min) / (max - min)
+
+print('applying grayscale')
+X_train = grayscale(X_train)
+X_valid = grayscale(X_valid)
+X_test = grayscale(X_test)
+
+print('applying feature scaling')
+min = np.min([np.min(X_train), np.min(X_valid), np.min(X_test)])
+max = np.max([np.max(X_train), np.max(X_valid), np.max(X_test)])
+X_train = feature_scaled(X_train, min, max)
+X_valid = feature_scaled(X_valid, min, max)
+X_test = feature_scaled(X_test, min, max)
 
 
 ### Define your architecture here.
@@ -70,9 +87,10 @@ def LeNet(x):
     mu = 0
     sigma = 0.1
 
-    # Layer 1: Convolutional. Input = 32x32x3. Output = 28x28x6.
-    w1 = tf.Variable(tf.truncated_normal([5, 5, 3, 6], mu, sigma))
-    b1 = tf.Variable(tf.zeros(6))
+    # Layer 1: Convolutional. Input = 32x32x1. Output = 28x28x6.
+    out1 = 6
+    w1 = tf.Variable(tf.truncated_normal([5, 5, 1, out1], mu, sigma))
+    b1 = tf.Variable(tf.zeros(out1))
     conv1 = tf.nn.conv2d(x, w1, strides=[1, 1, 1, 1], padding='VALID') + b1
 
     # Activation.
@@ -82,8 +100,9 @@ def LeNet(x):
     conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Layer 2: Convolutional. Output = 10x10x16.
-    w2 = tf.Variable(tf.truncated_normal([5, 5, 6, 16], mu, sigma))
-    b2 = tf.Variable(tf.zeros(16))
+    out2 = 16
+    w2 = tf.Variable(tf.truncated_normal([5, 5, out1, out2], mu, sigma))
+    b2 = tf.Variable(tf.zeros(out2))
     conv2 = tf.nn.conv2d(conv1, w2, strides=[1, 1, 1, 1], padding='VALID') + b2
 
     # Activation.
@@ -93,26 +112,29 @@ def LeNet(x):
     conv2 = tf.nn.max_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Flatten. Input = 5x5x16. Output = 400.
+    flat_out = 5 * 5 * out2
     fc0 = flatten(conv2)
 
     # Layer 3: Fully Connected. Input = 400. Output = 120.
-    w3 = tf.Variable(tf.truncated_normal([400, 120], mu, sigma))
-    b3 = tf.Variable(tf.zeros(120))
+    out3 = 120
+    w3 = tf.Variable(tf.truncated_normal([flat_out, out3], mu, sigma))
+    b3 = tf.Variable(tf.zeros(out3))
     fc1 = tf.matmul(fc0, w3) + b3
 
     # Activation.
     fc1 = tf.nn.relu(fc1)
 
     # Layer 4: Fully Connected. Input = 120. Output = 84.
-    w4 = tf.Variable(tf.truncated_normal([120, 84], mu, sigma))
-    b4 = tf.Variable(tf.zeros(84))
+    out4 = 84
+    w4 = tf.Variable(tf.truncated_normal([out3, out4], mu, sigma))
+    b4 = tf.Variable(tf.zeros(out4))
     fc2 = tf.matmul(fc1, w4) + b4
 
     # Activation.
     fc2 = tf.nn.relu(fc2)
 
     # Layer 5: Fully Connected. Input = 84. Output = 43 (n_classes).
-    w5 = tf.Variable(tf.truncated_normal([84, n_classes], mu, sigma))
+    w5 = tf.Variable(tf.truncated_normal([out4, n_classes], mu, sigma))
     b5 = tf.Variable(tf.zeros(n_classes))
     logits = tf.matmul(fc2, w5) + b5
 
@@ -127,12 +149,12 @@ def LeNet(x):
 ### Once a final model architecture is selected,
 ### the accuracy on the test set should be calculated and reported as well.
 ### Feel free to use as many code cells as needed.
-x = tf.placeholder(tf.float32, (None, 32, 32, 3))
+x = tf.placeholder(tf.float32, (None, 32, 32, 1))
 y = tf.placeholder(tf.int32, (None))
 one_hot_y = tf.one_hot(y, n_classes)
 
 learning_rate = 0.001
-batch_size = 512
+batch_size = 128
 epochs = 10
 
 logits = LeNet(x)
