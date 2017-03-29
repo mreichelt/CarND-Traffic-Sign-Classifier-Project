@@ -86,9 +86,10 @@ def LeNet(x):
     # Arguments used for tf.truncated_normal, randomly defines variables for the weights and biases for each layer
     mu = 0
     sigma = 0.1
+    net_multiplier = 5
 
     # Layer 1: Convolutional. Input = 32x32x1. Output = 28x28x6.
-    out1 = 6
+    out1 = 6 * net_multiplier
     w1 = tf.Variable(tf.truncated_normal([5, 5, 1, out1], mu, sigma))
     b1 = tf.Variable(tf.zeros(out1))
     conv1 = tf.nn.conv2d(x, w1, strides=[1, 1, 1, 1], padding='VALID') + b1
@@ -100,7 +101,7 @@ def LeNet(x):
     conv1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Layer 2: Convolutional. Output = 10x10x16.
-    out2 = 16
+    out2 = 16 * net_multiplier
     w2 = tf.Variable(tf.truncated_normal([5, 5, out1, out2], mu, sigma))
     b2 = tf.Variable(tf.zeros(out2))
     conv2 = tf.nn.conv2d(conv1, w2, strides=[1, 1, 1, 1], padding='VALID') + b2
@@ -116,7 +117,7 @@ def LeNet(x):
     fc0 = flatten(conv2)
 
     # Layer 3: Fully Connected. Input = 400. Output = 120.
-    out3 = 120
+    out3 = 120 * net_multiplier
     w3 = tf.Variable(tf.truncated_normal([flat_out, out3], mu, sigma))
     b3 = tf.Variable(tf.zeros(out3))
     fc1 = tf.matmul(fc0, w3) + b3
@@ -124,11 +125,14 @@ def LeNet(x):
     # Activation.
     fc1 = tf.nn.relu(fc1)
 
+    # DROPOUT
+    h_fc1_drop = tf.nn.dropout(fc1, keep_prob)
+
     # Layer 4: Fully Connected. Input = 120. Output = 84.
-    out4 = 84
+    out4 = 84 * net_multiplier
     w4 = tf.Variable(tf.truncated_normal([out3, out4], mu, sigma))
     b4 = tf.Variable(tf.zeros(out4))
-    fc2 = tf.matmul(fc1, w4) + b4
+    fc2 = tf.matmul(h_fc1_drop, w4) + b4
 
     # Activation.
     fc2 = tf.nn.relu(fc2)
@@ -151,11 +155,13 @@ def LeNet(x):
 ### Feel free to use as many code cells as needed.
 x = tf.placeholder(tf.float32, (None, 32, 32, 1))
 y = tf.placeholder(tf.int32, (None))
+keep_prob = tf.placeholder(tf.float32)
 one_hot_y = tf.one_hot(y, n_classes)
 
 learning_rate = 0.001
 batch_size = 128
 epochs = 10
+dropout = 0.5
 
 logits = LeNet(x)
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_y)
@@ -175,7 +181,7 @@ def evaluate(X_data, y_data):
     sess = tf.get_default_session()
     for offset in range(0, num_examples, batch_size):
         batch_x, batch_y = X_data[offset:offset + batch_size], y_data[offset:offset + batch_size]
-        accuracy = sess.run(accuracy_operation, feed_dict={x: batch_x, y: batch_y})
+        accuracy = sess.run(accuracy_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 1.0})
         total_accuracy += (accuracy * len(batch_x))
     return total_accuracy / num_examples
 
@@ -191,16 +197,17 @@ with tf.Session() as sess:
         for offset in range(0, num_examples, batch_size):
             end = offset + batch_size
             batch_x, batch_y = X_train[offset:end], y_train[offset:end]
-            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y})
+            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: dropout})
 
-        validation_accuracy = evaluate(X_valid, y_valid)
         print("Epoch {} ...".format(i+1))
-        print("Validation Accuracy = {:.3f}".format(validation_accuracy))
+        print("Train Accuracy = {:.3f}".format(evaluate(X_train, y_train)))
+        print("Validation Accuracy = {:.3f}".format(evaluate(X_valid, y_valid)))
         print()
 
     saver.save(sess, './model')
     print("Model saved")
-
+    
+    print("Test Accuracy = {:.3f}".format(evaluate(X_test, y_test)))
 
 ### Load the images and plot them here.
 ### Feel free to use as many code cells as needed.
