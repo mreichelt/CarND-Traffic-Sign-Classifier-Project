@@ -162,6 +162,8 @@ learning_rate = 0.001
 batch_size = 128
 epochs = 10
 dropout = 0.5
+skip_training = True
+save_path = './model'
 
 logits = LeNet(x)
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_y)
@@ -190,22 +192,28 @@ with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     num_examples = len(X_train)
 
-    print("Training...")
-    print()
-    for i in range(epochs):
-        X_train, y_train = shuffle(X_train, y_train)
-        for offset in range(0, num_examples, batch_size):
-            end = offset + batch_size
-            batch_x, batch_y = X_train[offset:end], y_train[offset:end]
-            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: dropout})
-
-        print("Epoch {} ...".format(i+1))
-        print("Train Accuracy = {:.3f}".format(evaluate(X_train, y_train)))
-        print("Validation Accuracy = {:.3f}".format(evaluate(X_valid, y_valid)))
+    if not skip_training:
+        print("Training...")
         print()
+        for i in range(epochs):
+            X_train, y_train = shuffle(X_train, y_train)
+            for offset in range(0, num_examples, batch_size):
+                end = offset + batch_size
+                batch_x, batch_y = X_train[offset:end], y_train[offset:end]
+                sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: dropout})
 
-    saver.save(sess, './model')
-    print("Model saved")
+            print("Epoch {} ...".format(i+1))
+            print("Train Accuracy = {:.3f}".format(evaluate(X_train, y_train)))
+            print("Validation Accuracy = {:.3f}".format(evaluate(X_valid, y_valid)))
+            print()
+
+        saver.save(sess, save_path)
+        print("Model saved")
+
+    else:
+        saver.restore(sess, save_path)
+        print("Model loaded")
+
     
     print("Test Accuracy = {:.3f}".format(evaluate(X_test, y_test)))
 
