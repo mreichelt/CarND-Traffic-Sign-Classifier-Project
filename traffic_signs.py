@@ -1,5 +1,6 @@
 # Load pickled data
 import pickle
+
 import tensorflow as tf
 
 # TODO: Fill this in based on where you saved the training and testing data
@@ -41,18 +42,18 @@ print("Number of classes =", n_classes)
 
 ### Data exploration visualization code goes here.
 ### Feel free to use as many code cells as needed.
-#import matplotlib.pyplot as plt
-import random
+#%matplotlib inline
+import matplotlib.pyplot as plt
 import numpy as np
 
-samples_to_show = 1
+# grab indices of all 43 labels (first image is ok for visualization)
+plt.rcParams.update({'figure.max_open_warning': 100})
+u, indices = np.unique(y_train, return_index=True)
 
-indexes = list(range(n_train))
-random.shuffle(indexes)
-indexes = indexes[0:samples_to_show]
-#for i in indexes:
-    #imgplot = plt.imshow(X_train[i])
-    # plt.show()
+for i in indices:
+    plt.figure(figsize=(6, 3))
+    plt.title('label ' + str(y_train[i]))
+    plt.imshow(X_train[i].squeeze())
 
 ### Preprocess the data here. Preprocessing steps could include normalization, converting to grayscale, etc.
 ### Feel free to use as many code cells as needed.
@@ -61,8 +62,10 @@ def grayscale(X):
     # we simply add up the colors - they will be normalized away anyway later on
     return np.sum(X, axis=3, keepdims=True)
 
+
 def feature_scaled(X, min, max):
     return (X - min) / (max - min)
+
 
 print('applying grayscale')
 X_train = grayscale(X_train)
@@ -76,11 +79,11 @@ X_train = feature_scaled(X_train, min, max)
 X_valid = feature_scaled(X_valid, min, max)
 X_test = feature_scaled(X_test, min, max)
 
-
 ### Define your architecture here.
 ### Feel free to use as many code cells as needed.
 from tensorflow.contrib.layers import flatten
 from sklearn.utils import shuffle
+
 
 def LeNet(x):
     # Arguments used for tf.truncated_normal, randomly defines variables for the weights and biases for each layer
@@ -144,9 +147,6 @@ def LeNet(x):
     return logits
 
 
-
-
-
 ### Train your model here.
 ### Calculate and report the accuracy on the training and validation set.
 ### Once a final model architecture is selected,
@@ -168,9 +168,8 @@ save_path = './model'
 logits = LeNet(x)
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_y)
 loss_operation = tf.reduce_mean(cross_entropy)
-optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 training_operation = optimizer.minimize(loss_operation)
-
 
 correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(one_hot_y, 1))
 accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -202,7 +201,7 @@ with tf.Session() as sess:
                 batch_x, batch_y = X_train[offset:end], y_train[offset:end]
                 sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: dropout})
 
-            print("Epoch {} ...".format(i+1))
+            print("Epoch {} ...".format(i + 1))
             print("Train Accuracy = {:.3f}".format(evaluate(X_train, y_train)))
             print("Validation Accuracy = {:.3f}".format(evaluate(X_valid, y_valid)))
             print()
@@ -214,12 +213,12 @@ with tf.Session() as sess:
         saver.restore(sess, save_path)
         print("Model loaded")
 
-
     print("Test Accuracy = {:.3f}".format(evaluate(X_test, y_test)))
 
 ### Load the images and plot them here.
 ### Feel free to use as many code cells as needed.
 import cv2
+
 X_germansigns_files = [
     '1_stop_14.png',
     '2_noentry_17.png',
@@ -227,21 +226,38 @@ X_germansigns_files = [
     '4_yield_13.png',
     '5_rightofway_nextintersection_11.png'
 ]
-X_germansigns = np.array([cv2.imread('german_signs/' + file) for file in X_germansigns_files])
+
+
+# yay, matplotlib and cv2 have blue and red flipped - thanks to http://stackoverflow.com/a/15074748/1134940 we can
+# easily flip those again :)
+def flip_blue_red(img):
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+X_germansigns_orig = np.array([flip_blue_red(cv2.imread('german_signs/' + file)) for file in X_germansigns_files])
 y_germansigns = np.array([14, 17, 14, 13, 11])
-
-
-
 
 ### Run the predictions here and use the model to output the prediction for each image.
 ### Make sure to pre-process the images with the same pre-processing pipeline used earlier.
 ### Feel free to use as many code cells as needed.
-
-X_germansigns = grayscale(X_germansigns)
+X_germansigns = grayscale(X_germansigns_orig)
 X_germansigns = feature_scaled(X_germansigns, min, max)
+
+for i, img in enumerate(X_germansigns):
+    plt.figure(figsize=(6, 3))
+    plt.subplot(1, 2, 1)
+    plt.imshow(X_germansigns_orig[i].squeeze())
+    plt.title('original')
+
+    plt.subplot(1, 2, 2)
+    plt.imshow(img.squeeze(), cmap='gray')
+    plt.title('grayscaled + normalized')
+
 with tf.Session() as sess:
     saver.restore(sess, save_path)
+    # this will output all 43 predictions for each of the 5 images, shape: 5x43
     prediction = sess.run(logits, feed_dict={x: X_germansigns, y: y_germansigns, keep_prob: 1.0})
+    # now just take the index with the highest possibility
     predicted_labels = np.argmax(prediction, axis=1)
     print('predicted labels: ' + np.array_str(predicted_labels))
     print('correct labels:   ' + np.array_str(y_germansigns))
@@ -253,14 +269,10 @@ print("Accuracy for German signs = {:.3f}".format(accuracy))
 
 
 
-
-
 ### Print out the top five softmax probabilities for the predictions on the German traffic sign images found on the web.
 ### Feel free to use as many code cells as needed.
-
-
-
-
+with tf.Session() as sess:
+    print(sess.run(tf.nn.top_k(tf.constant(prediction), k=5)))
 
 
 ### Visualize your network's feature maps here.
