@@ -179,8 +179,10 @@ My model predicted all traffic signs correctly. The top five soft max probabilit
 
 | _P1_ |  P2 |  P3 |  P4 |  P5 | 
 |:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|
-| **.29 Stop** | .06  Keep right| .06 No entry| .05 Yield| .04 70km/h |
-| **.29 No entry** |   .09 Slippery road|   .08 No passing|   .08 Bumpy road| .07 Turn left ahead |
-| **.28 Stop**| .06 No entry| .04 70km/h| .03 Turn left ahead| .03 Turn right ahead |
-| **.23 Yield**|  .15 Ahead only|  .09 No passing|   .08 Road work| .08 No passing over 3.5 tons |
-| **.37 Right-of-way at the next intersection**|  .24 Pedestrians|  .15 Beware of ice/snow|  .11 General caution| .08 Double curve |
+|1.00 Stop| 0.00 Keep right| 0.00 Turn right ahead| 0.00 Turn left ahead| 0.00 No entry|
+|1.00 No entry| 0.00 Turn left ahead| 0.00 Stop| 0.00 Keep right| 0.00 No passing|
+|1.00 Stop| 0.00 Turn right ahead| 0.00 Speed limit (120km/h)| 0.00 Turn left ahead| 0.00 Keep right|
+|1.00 Yield| 0.00 Ahead only| 0.00 No passing for vehicles over 3.5 metric tons| 0.00 No passing| 0.00 No vehicles|
+|1.00 Right-of-way at the next intersection| 0.00 Pedestrians| 0.00 Beware of ice/snow| 0.00 Double curve| 0.00 General caution|
+
+Based on these results my model is *really* certain about its predictions.
